@@ -55,7 +55,7 @@ namespace SaveAfterLastLogout
         /// </summary>
         public override Version Version
         {
-            get { return new Version("1.0.0.0");  }
+            get { return new Version("1.0.0.1");  }
         }
 
         /// <summary>
@@ -126,13 +126,19 @@ namespace SaveAfterLastLogout
             DateTime now = DateTime.Now;
 
             /* 
-             * Checks if the server has been saved in the last 20 minutes
-             * If the server has been saved and the 20 minute interval elapses, then saving can be done again
+             * Checks if the server has been saved in the last 2 minutes
+             * If the server has been saved and the 2 minute interval elapses, then saving can be done again
              */
             if (isSaved)
+            {
                 if (countDown != DateTime.MinValue)
-                    if ((now - countDown).TotalMinutes >= 20)
+                {
+                    if ((now - countDown).TotalMinutes >= 2)
+                    {
                         isSaved = false;
+                    }
+                }
+            }  
         }
 
         /// <summary>
