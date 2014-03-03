@@ -41,6 +41,16 @@ namespace SaveAfterLastLogout
     public class SaveAfterLastLogout : TerrariaPlugin
     {
         /// <summary>
+        /// Whether the server has been saved by the PlayerLeaveServer method
+        /// </summary>
+        public bool isSaved;
+        /// <summary>
+        /// The UTC time at which the server was saved
+        /// </summary>
+        public DateTime countDown;
+
+
+        /// <summary>
         /// Plugin version
         /// </summary>
         public override Version Version
@@ -90,6 +100,39 @@ namespace SaveAfterLastLogout
         public override void Initialize()
         {
             ServerApi.Hooks.ServerLeave.Register(this, OnPlayerLeaveServer);
+            ServerApi.Hooks.GameUpdate.Register(this, OnUpdate);
+        }
+
+        /// <summary>
+        /// Dispose hooks registered by the plugin
+        /// </summary>
+        /// <param name="disposing"></param>
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                ServerApi.Hooks.ServerLeave.Deregister(this, OnPlayerLeaveServer);
+                ServerApi.Hooks.GameUpdate.Deregister(this, OnUpdate);
+            }
+            base.Dispose(disposing);
+        }
+
+        /// <summary>
+        /// Triggers every game update.
+        /// </summary>
+        /// <param name="args"></param>
+        private void OnUpdate(EventArgs args)
+        {
+            DateTime now = DateTime.Now;
+
+            /* 
+             * Checks if the server has been saved in the last 20 minutes
+             * If the server has been saved and the 20 minute interval elapses, then saving can be done again
+             */
+            if (isSaved)
+                if (countDown != DateTime.MinValue)
+                    if ((now - countDown).TotalMinutes >= 20)
+                        isSaved = false;
         }
 
         /// <summary>
@@ -97,14 +140,21 @@ namespace SaveAfterLastLogout
         /// Automatically executes the "save" command when
         /// the last player has left the server.
         /// </summary>
-        /// <param name="args">LeaveEvent Parameters. Has a "who" parameter with the remaining player count</param>
+        /// <param name="args">LeaveEvent Parameters. Has a "who" parameter which corresponds
+        /// to the leaving player's Index</param>
         private void OnPlayerLeaveServer(LeaveEventArgs args)
         {
             int playerCount = TShock.Utils.ActivePlayers();
 
-            // is this the last player online?
-            if (playerCount <= 1)
+            // is this the last player online, 
+                //and has the server saved in the last 20 minutes due to the last player leaving?
+            if (playerCount <= 1 && !isSaved)
             {
+                // Server has been saved, so set isSaved to true
+                isSaved = true;
+                // Set countDown to this moment on the universal time clock
+                countDown = DateTime.UtcNow;
+
                 // execute save command
                 TShock.Utils.SaveWorld();
             }
