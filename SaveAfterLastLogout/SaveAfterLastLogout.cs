@@ -90,7 +90,7 @@ namespace SaveAfterLastLogout
             : base(game)
         {
             // Plugin should be loaded after tshock has been initialized
-            Order = 0;
+            Order = -1;
         }
 
         /// <summary>
@@ -126,14 +126,14 @@ namespace SaveAfterLastLogout
             DateTime now = DateTime.Now;
 
             /* 
-             * Checks if the server has been saved in the last 2 minutes
-             * If the server has been saved and the 2 minute interval elapses, then saving can be done again
+             * Checks if the server has been saved in the last 1 minutes
+             * If the server has been saved and the 1 minute interval elapses, then saving can be done again
              */
             if (isSaved)
             {
                 if (countDown != DateTime.MinValue)
                 {
-                    if ((now - countDown).TotalMinutes >= 2)
+                    if ((now - countDown).TotalMinutes >= 1)
                     {
                         isSaved = false;
                     }
@@ -147,13 +147,13 @@ namespace SaveAfterLastLogout
         /// the last player has left the server.
         /// </summary>
         /// <param name="args">LeaveEvent Parameters. Has a "who" parameter which corresponds
-        /// to the leaving player's Index</param>
+        /// to the leaving player's index</param>
         private void OnPlayerLeaveServer(LeaveEventArgs args)
         {
             int playerCount = TShock.Utils.ActivePlayers();
 
             // is this the last player online, 
-                //and has the server saved in the last 20 minutes due to the last player leaving?
+            // and has the server saved in the last 1 minutes due to the last player leaving?
             if (playerCount <= 1 && !isSaved)
             {
                 // Server has been saved, so set isSaved to true
