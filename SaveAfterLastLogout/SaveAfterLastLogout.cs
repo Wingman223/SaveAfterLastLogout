@@ -43,19 +43,18 @@ namespace SaveAfterLastLogout
         /// <summary>
         /// Whether the server has been saved by the PlayerLeaveServer method
         /// </summary>
-        public bool isSaved;
+        public bool     canSave;
         /// <summary>
         /// The UTC time at which the server was saved
         /// </summary>
-        public DateTime countDown;
-
+        public DateTime lastSaved;
 
         /// <summary>
         /// Plugin version
         /// </summary>
         public override Version Version
         {
-            get { return new Version("1.0.0.1");  }
+            get { return new Version("1.0.0.2");  }
         }
 
         /// <summary>
@@ -101,6 +100,10 @@ namespace SaveAfterLastLogout
         {
             ServerApi.Hooks.ServerLeave.Register(this, OnPlayerLeaveServer);
             ServerApi.Hooks.GameUpdate.Register(this, OnUpdate);
+
+            // After initialization the server is able to save
+            canSave         = true;
+            lastSaved       = DateTime.MinValue;
         }
 
         /// <summary>
@@ -123,22 +126,23 @@ namespace SaveAfterLastLogout
         /// <param name="args"></param>
         private void OnUpdate(EventArgs args)
         {
-            DateTime now = DateTime.Now;
-
-            /* 
-             * Checks if the server has been saved in the last 1 minutes
-             * If the server has been saved and the 1 minute interval elapses, then saving can be done again
-             */
-            if (isSaved)
+            if (canSave == false)
             {
-                if (countDown != DateTime.MinValue)
+                if ( lastSaved != DateTime.MinValue)
                 {
-                    if ((now - countDown).TotalMinutes >= 1)
+                    // is the time between lastSaved and now greather than 1 minute
+                    if ((DateTime.Now - lastSaved).TotalMinutes >= 1)
                     {
-                        isSaved = false;
+                        canSave = true;
                     }
                 }
-            }  
+                else
+                {
+                    // Timer has not been set
+                    // Set it, to prevent a saving deadlock ( should not occur )
+                    lastSaved = DateTime.Now;
+                }
+            }
         }
 
         /// <summary>
@@ -150,19 +154,16 @@ namespace SaveAfterLastLogout
         /// to the leaving player's index</param>
         private void OnPlayerLeaveServer(LeaveEventArgs args)
         {
+            // Get the currrent player count
             int playerCount = TShock.Utils.ActivePlayers();
 
-            // is this the last player online, 
-            // and has the server saved in the last 1 minutes due to the last player leaving?
-            if (playerCount <= 1 && !isSaved)
+            // is this the last player and is able to save?
+            if (playerCount <= 1 && canSave == true)
             {
-                // Server has been saved, so set isSaved to true
-                isSaved = true;
-                // Set countDown to this moment on the universal time clock
-                countDown = DateTime.UtcNow;
-
-                // execute save command
                 TShock.Utils.SaveWorld();
+
+                lastSaved   = DateTime.Now;
+                canSave     = false;
             }
         }
     }
